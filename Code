@@ -1,0 +1,41 @@
+library(tidyverse)    
+library(survival)     # For survival analysis
+library(survminer)    # For survival plot visualization
+
+
+n <- 200  # Total participants
+treatment <- rbinom(n, 1, 0.5)  # Random assignment: 0 = Control, 1 = Treatment
+
+hr <- 0.6
+baseline_hazard <- 0.05
+
+time <- rexp(n, rate = baseline_hazard * exp(-log(hr) * treatment))
+
+censor_time <- rexp(n, rate = 0.01)
+observed_time <- pmin(time, censor_time)
+event <- as.numeric(time <= censor_time)  # 1 = event occurred, 0 = censored
+
+trial_df <- tibble(
+  time = observed_time,
+  status = event,
+  treatment = factor(treatment, labels = c("Control", "Treatment"))
+)
+
+glimpse(trial_df)
+
+km_fit <- survfit(Surv(time, status) ~ treatment, data = trial_df)
+
+ggsurvplot(
+  km_fit,
+  data = trial_df,
+  pval = TRUE,                   # Show log-rank test p-value
+  conf.int = TRUE,               # Show confidence intervals
+  risk.table = TRUE,             # Show number at risk below plot
+  legend.title = "Group",
+  legend.labs = c("Control", "Treatment"),
+  palette = c("#E69F00", "#56B4E9"),
+  title = "Kaplan-Meier Survival Curve: Treatment vs Control",
+  xlab = "Time",
+  ylab = "Survival Probability",
+  ggtheme = theme_minimal()
+)
